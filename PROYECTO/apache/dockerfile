@@ -1,0 +1,39 @@
+FROM debian:bullseye
+
+RUN apt update 
+RUN apt install -y apache2 php libapache2-mod-php php-mysql
+RUN apt install -y nano iproute2 iputils-ping openssl openssh-server rsyslog
+
+COPY bootstrap /var/www/html/bootstrap
+RUN chmod -R 755 /var/www/html/bootstrap
+
+COPY intranetHTTPS.conf /etc/apache2/sites-available/intranetHTTPS.conf
+COPY ports.conf /etc/apache2/ports.conf
+COPY .htdigest /etc/apache2/.htdigest
+RUN echo "ServerName PROYECTO" >> /etc/apache2/apache2.conf
+
+RUN chmod 600 /etc/apache2/.htdigest
+RUN chown www-data:www-data /etc/apache2/.htdigest
+RUN a2ensite intranetHTTPS
+RUN a2enmod auth_digest
+
+RUN a2enmod lua
+COPY status.conf /etc/apache2/mods-available/status.conf
+COPY server-status.lua /etc/apache2/server-status.lua
+
+COPY server.crt /etc/ssl/certs/server.crt
+COPY server.key /etc/ssl/certs/server.key
+RUN a2enmod ssl
+
+RUN mkdir /var/run/sshd
+RUN echo 'root:1234' | chpasswd
+RUN echo "PermitRootLogin yes" > /etc/ssh/sshd_config.d/custom-login.conf && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/custom-login.conf && \
+    echo "AllowUsers root@192.168.100.5" >> /etc/ssh/sshd_config.d/custom-login.conf
+RUN chmod 644 /etc/ssh/sshd_config.d/custom-login.conf
+RUN touch /var/log/auth.log && chmod 640 /var/log/auth.log
+EXPOSE 22
+
+CMD ["sh", "-c", "/usr/sbin/rsyslogd -n & /usr/sbin/sshd -D & apachectl -D FOREGROUND & tail -F /var/log/auth.log"]
+
+EXPOSE 443

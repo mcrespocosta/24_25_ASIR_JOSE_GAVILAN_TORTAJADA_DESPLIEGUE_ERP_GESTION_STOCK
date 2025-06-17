@@ -1,0 +1,16 @@
+FROM debian:latest
+
+RUN apt-get update && apt-get install -y openssh-server iputils-ping default-mysql-client dnsutils net-tools fail2ban rsyslog && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /var/run/sshd
+RUN echo 'root:1234' | chpasswd
+
+RUN echo "PermitRootLogin yes" > /etc/ssh/sshd_config.d/custom-login.conf && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/custom-login.conf
+
+COPY jail.local /etc/fail2ban/jail.local
+EXPOSE 22
+
+RUN touch /var/log/auth.log && chmod 640 /var/log/auth.log
+
+CMD ["sh", "-c", "/usr/sbin/rsyslogd -n & /usr/sbin/sshd -D & /usr/bin/fail2ban-server -b & tail -F /var/log/auth.log"]

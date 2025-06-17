@@ -1,0 +1,13 @@
+options {
+    directory "/var/cache/bind";
+    listen-on { 192.168.100.2; };
+    allow-query { 192.168.100.0/24; };
+    allow-recursion { 192.168.100.0/24; };
+
+    // Si tu DNS necesita internet, descomenta y usa:
+    // forwarders {
+    //     8.8.8.8;
+    //     1.1.1.1;
+    // };
+    // forward only;
+};

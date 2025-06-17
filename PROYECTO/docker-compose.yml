@@ -1,0 +1,53 @@
+services:
+  apache:
+    build:
+      context: ./apache
+      dockerfile: dockerfile
+    networks:
+      redbridge:
+        ipv4_address: 192.168.100.3
+
+
+  dns: 
+    build:
+      context: ./dns
+      dockerfile: dockerfile
+    networks:
+      redbridge:
+        ipv4_address: 192.168.100.2
+
+  mysql:
+    image: mysql:latest
+    container_name: database
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d
+    networks:
+      redbridge:
+        ipv4_address: 192.168.100.4
+    ports:
+      - "3306:3306"
+
+  manager:
+    build:
+      context: ./manager
+      dockerfile: dockerfile
+    networks:
+      redbridge:
+        ipv4_address: 192.168.100.5
+    ports:
+      - "2222:22"
+    depends_on:
+      - apache
+      - dns
+      - mysql
+
+networks:
+  redbridge:
+    external: true
+
+volumes:
+  mysql_data:
+    name: mysql_data

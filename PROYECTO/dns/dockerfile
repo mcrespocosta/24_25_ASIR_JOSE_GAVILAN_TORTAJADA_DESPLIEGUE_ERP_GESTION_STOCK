@@ -1,0 +1,23 @@
+FROM debian:bullseye
+
+RUN apt update && apt upgrade -y
+RUN apt install iproute2 dnsutils iputils-ping nano bind9 bind9utils bind9-doc openssh-server -y
+
+COPY named /etc/default/named
+COPY named.conf.local /etc/bind/named.conf.local
+COPY named.conf.options /etc/bind/named.conf.options
+
+RUN mkdir /etc/bind/zones
+COPY proyecto.com.zone /etc/bind/zones/proyecto.com.zone
+COPY db.192.168.100 /etc/bind/zones/db.192.168.100
+
+RUN mkdir /var/run/sshd
+RUN echo 'root:1234' | chpasswd
+RUN echo "PermitRootLogin yes" > /etc/ssh/sshd_config.d/custom-login.conf && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/custom-login.conf && \
+    echo "AllowUsers root@192.168.100.5" >> /etc/ssh/sshd_config.d/custom-login.conf
+RUN chmod 644 /etc/ssh/sshd_config.d/custom-login.conf
+RUN touch /var/log/auth.log && chmod 640 /var/log/auth.log
+EXPOSE 22
+
+CMD ["sh", "-c", "/usr/sbin/rsyslogd -n & /usr/sbin/sshd -D & /usr/sbin/named -g & tail -F /var/log/auth.log"]
